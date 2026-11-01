@@ -52,7 +52,6 @@
   }
   .final { text-align:center; padding:22px 10px; }
   .final .score { font-size:44px; font-weight:800; color:var(--gold); line-height:1.2; }
-  .list { margin:6px 0 0; padding-left:20px; color:var(--dim); font-size:14px; }
   .hide { display:none; }
   .foot { color:#7c6e5e; font-size:12px; margin-top:20px; text-align:center; }
 </style>
@@ -65,7 +64,6 @@
     <p class="sub">长征闯关问答 · 纪念红军长征胜利90周年</p>
     <div class="card">
       <p style="margin-top:0">十道关卡，从江西瑞金走到甘肃会宁。每关给你一段史料，根据它作判断。答错会说明史实，你可以重答，但这一关不再计满分。</p>
-      <p class="warn" id="todoHint"></p>
     </div>
     <button class="primary" id="btnStart">开始长征</button>
     <button class="ghost hide" id="btnRestart">从头再来</button>
@@ -99,10 +97,6 @@
       <input type="text" id="myWords" maxlength="60" placeholder="例如：把一门很难的课啃下来">
       <p id="wordsShow" class="warn hide"></p>
     </div>
-    <div class="card hide" id="todoCard">
-      <p style="margin-top:0">下列关卡还没标注史料出处，交作业前补齐：</p>
-      <ul class="list" id="todoList"></ul>
-    </div>
     <button class="primary" id="btnAgain">再走一遍</button>
   </div>
 
@@ -111,11 +105,9 @@
 
 <script>
 /* ============================================================
-   QUESTIONS：十关题库。交作业前请做两件事：
-   1) 把每关 material 里的年代、数字、说法对着权威史料核一遍
-      （《中国共产党历史》第一卷、军事博物馆、本校图书馆数据库）；
-   2) 给每关 source 填上你查到的出处，留空会在通关页提醒你。
-   answer 是正确项在 options 里的下标，从 0 开始数。
+   QUESTIONS：十关题库。题目定稿后，直接替换这里的文字即可，
+   一关一个对象：place 地名、time 时间、material 情境材料、
+   ask 提问、options 四个选项、answer 正确项下标（从 0 数）、explain 解析。
    ============================================================ */
 const QUESTIONS = [
   {
@@ -129,8 +121,7 @@ const QUESTIONS = [
       "辎重齐全，便于在新根据地恢复生产"
     ],
     answer: 1,
-    explain: "“大搬家”式转移使部队难以机动作战，出发后连遭重创，湘江战役后中央红军已由 8.6 万余人锐减至 3 万余人，直接引发全军对错误军事领导的批评。",
-    source: ""
+    explain: "“大搬家”式转移使部队难以机动作战，出发后连遭重创，湘江战役后中央红军已由 8.6 万余人锐减至 3 万余人，直接引发全军对错误军事领导的批评。"
   },
   {
     place: "广西湘江", time: "1934年11月底—12月初",
@@ -143,8 +134,7 @@ const QUESTIONS = [
       "红军主力被打散，长征就此失败"
     ],
     answer: 0,
-    explain: "湘江战役是中央红军长征以来最惨烈的一战。重大损失使广大干部战士从震惊中觉醒，为遵义会议纠正错误军事领导作了思想上、组织上的准备。",
-    source: ""
+    explain: "湘江战役是中央红军长征以来最惨烈的一战。重大损失使广大干部战士从震惊中觉醒，为遵义会议纠正错误军事领导作了思想上、组织上的准备。"
   },
   {
     place: "贵州遵义", time: "1935年1月15日—17日",
@@ -157,8 +147,7 @@ const QUESTIONS = [
       "制定了新民主主义革命总路线"
     ],
     answer: 1,
-    explain: "遵义会议在极端危急的关头挽救了党、挽救了红军、挽救了中国革命，是中国共产党历史上一个生死攸关的转折点，标志着党在政治上开始走向成熟。",
-    source: ""
+    explain: "遵义会议在极端危急的关头挽救了党、挽救了红军、挽救了中国革命，是中国共产党历史上一个生死攸关的转折点，标志着党在政治上开始走向成熟。"
   },
   {
     place: "赤水河流域", time: "1935年1月—3月",
@@ -171,8 +160,7 @@ const QUESTIONS = [
       "敌军各部之间已停止协同"
     ],
     answer: 2,
-    explain: "四渡赤水是遵义会议后红军军事指挥艺术的第一场大仗，以高度灵活的运动战迷惑、调动敌人，为跳出国军包围圈创造了条件。",
-    source: ""
+    explain: "四渡赤水是遵义会议后红军军事指挥艺术的第一场大仗，以高度灵活的运动战迷惑、调动敌人，为跳出国军包围圈创造了条件。"
   },
   {
     place: "云南禄劝·金沙江", time: "1935年5月",
@@ -185,8 +173,7 @@ const QUESTIONS = [
       "跳出了数十万敌军的围追堵截，取得战略转移中有决定意义的胜利"
     ],
     answer: 3,
-    explain: "巧渡金沙江使中央红军摆脱了敌人的围追堵截，实现了战略转移意图，为后续强渡大渡河、北上陕北创造了决定性的条件。",
-    source: ""
+    explain: "巧渡金沙江使中央红军摆脱了敌人的围追堵截，实现了战略转移意图，为后续强渡大渡河、北上陕北创造了决定性的条件。"
   },
   {
     place: "四川泸定桥", time: "1935年5月29日",
@@ -199,8 +186,7 @@ const QUESTIONS = [
       "说明大渡河防线本就形同虚设"
     ],
     answer: 2,
-    explain: "飞夺泸定桥的关键在于一昼夜的强行军，使红军抢在敌军增援、拆桥之前到达并夺下桥头，摆脱了成为“石达开第二”的危险。（奔袭里程、突击队员人数等具体数字请以你核定的史料为准，并填进 source。）",
-    source: ""
+    explain: "飞夺泸定桥的关键在于一昼夜的强行军，使红军抢在敌军增援、拆桥之前到达并夺下桥头，摆脱了成为“石达开第二”的危险。"
   },
   {
     place: "四川夹金山", time: "1935年6月",
@@ -213,8 +199,7 @@ const QUESTIONS = [
       "红军缺乏地图和向导的技术问题"
     ],
     answer: 2,
-    explain: "雪山、草地等极端自然环境造成的减员不亚于战斗伤亡。正是在这种条件下，纪律、互助和不肯放弃的信念维持了部队的战斗力。",
-    source: ""
+    explain: "雪山、草地等极端自然环境造成的减员不亚于战斗伤亡。正是在这种条件下，纪律、互助和不肯放弃的信念维持了部队的战斗力。"
   },
   {
     place: "川西北松潘草地", time: "1935年8月",
@@ -227,8 +212,7 @@ const QUESTIONS = [
       "兵员素质参差不齐"
     ],
     answer: 0,
-    explain: "草地是长征中后勤最绝望的一段：无粮、无路、无人烟。部队能够成建制走出，靠的是严密的组织和对同志的照护，这也是长征精神中最具体的部分。",
-    source: ""
+    explain: "草地是长征中后勤最绝望的一段：无粮、无路、无人烟。部队能够成建制走出，靠的是严密的组织和对同志的照护，这也是长征精神中最具体的部分。"
   },
   {
     place: "陕北吴起镇", time: "1935年10月19日",
@@ -241,8 +225,7 @@ const QUESTIONS = [
       "全民族抗战已经由此开始"
     ],
     answer: 1,
-    explain: "要区分两个节点：1935年10月是中央红军（红一方面军）到达陕北；1936年10月三大主力红军会师，长征才胜利结束。",
-    source: ""
+    explain: "要区分两个节点：1935年10月是中央红军（红一方面军）到达陕北；1936年10月三大主力红军会师，长征才胜利结束。"
   },
   {
     place: "甘肃会宁、将台堡", time: "1936年10月",
@@ -255,9 +238,7 @@ const QUESTIONS = [
       "时间错了：1935年10月是中央红军到达吴起镇，三大主力会师在1936年10月"
     ],
     answer: 3,
-    explain: "1935年10月中央红军到陕北，1936年10月三大主力在甘肃会宁、将台堡会师。两个时间不能混用 —— 这也是本次实践主题“1936年10月，三大主力红军的长征胜利结束”的依据。",
-    source: ""
-  }
+    explain: "1935年10月中央红军到陕北，1936年10月三大主力在甘肃会宁、将台堡会师。两个时间不能混用 —— 这也是本次实践主题“1936年10月，三大主力红军的长征胜利结束”的依据。"  }
 ];
 
 /* 下面都是引擎逻辑，改题目不用动。 */
@@ -324,10 +305,6 @@ function show(name) {
 }
 function renderHome() {
   show("s-home");
-  const blank = QUESTIONS.map((q, i) => i + 1).filter((n) => !QUESTIONS[n - 1].source.trim());
-  $("todoHint").textContent = blank.length
-    ? "当前有 " + blank.length + " 关缺少史料出处，做完记得补上。"
-    : "十关出处已齐。";
   const started = st.i > 0 || st.done;
   $("btnStart").textContent = st.done ? "看看你的通关页" : started ? "继续长征" : "开始长征";
   $("btnRestart").classList.toggle("hide", !started);
@@ -394,9 +371,6 @@ function renderFinal() {
   $("finalNote").textContent = missCount
     ? "有 " + missCount + " 关是重答后才走对的。"
     : "十关全部一次走对。";
-  const blank = QUESTIONS.map((q, i) => i + 1).filter((n) => !QUESTIONS[n - 1].source.trim());
-  $("todoCard").classList.toggle("hide", blank.length === 0);
-  $("todoList").innerHTML = blank.map((n) => "<li>第 " + n + " 关：" + QUESTIONS[n - 1].place + "</li>").join("");
   const words = $("myWords");
   words.oninput = () => {
     const p = $("wordsShow");
