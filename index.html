@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>二万五千里 · 长征闯关问答</title>
+<style>
+  :root {
+    --bg:#14100e; --panel:#241b16; --card:#2f241d; --line:#463528;
+    --ink:#f2ece2; --dim:#ab9c8a; --red:#c8402f; --gold:#d8a34a;
+    --ok:#5a9b52; --bad:#b3453a;
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body {
+    margin:0; background:var(--bg); color:var(--ink);
+    font:16px/1.7 "PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  .wrap { max-width:560px; margin:0 auto; padding:20px 18px 40px; }
+  h1 { font-size:26px; margin:0 0 4px; letter-spacing:1px; }
+  .sub { color:var(--dim); margin:0 0 22px; font-size:14px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:14px; }
+  .material { background:var(--card); border-left:4px solid var(--gold); border-radius:8px; padding:12px 14px; margin-bottom:14px; color:#e7ddcc; }
+  .ask { font-weight:700; margin:0 0 12px; }
+  button {
+    display:block; width:100%; text-align:left; margin:0 0 10px; padding:14px 16px;
+    font:inherit; color:var(--ink); background:var(--card);
+    border:1px solid #52402f; border-radius:12px; cursor:pointer;
+  }
+  button:active { transform:scale(.99); }
+  button.right { border-color:var(--ok); background:#23321f; }
+  button.wrong { border-color:var(--bad); background:#341f1c; }
+  button.primary { background:var(--red); border-color:#a83526; text-align:center; font-weight:700; }
+  button.ghost { background:transparent; text-align:center; color:var(--dim); border-color:#3a2c22; }
+  button:disabled { opacity:.6; cursor:default; }
+  .bar { height:8px; background:#3a2c22; border-radius:999px; overflow:hidden; margin:4px 0 14px; }
+  .bar i { display:block; height:100%; background:var(--gold); width:0; transition:width .35s; }
+  .head { display:flex; justify-content:space-between; align-items:baseline; font-size:13px; color:var(--dim); }
+  .tag { display:inline-block; font-size:12px; color:var(--gold); border:1px solid #5b4426; border-radius:999px; padding:1px 9px; margin-right:6px; }
+  .explain { background:#23321f; border-left:4px solid var(--ok); padding:11px 13px; border-radius:8px; font-size:14px; margin:4px 0 12px; }
+  .explain.bad { background:#341f1c; border-color:var(--bad); }
+  .warn { color:var(--gold); font-size:13px; }
+  input[type=text] {
+    width:100%; padding:13px 14px; font:inherit; color:var(--ink);
+    background:var(--card); border:1px solid var(--line); border-radius:12px; margin-bottom:12px;
+  }
+  .final { text-align:center; padding:22px 10px; }
+  .final .score { font-size:44px; font-weight:800; color:var(--gold); line-height:1.2; }
+  .list { margin:6px 0 0; padding-left:20px; color:var(--dim); font-size:14px; }
+  .hide { display:none; }
+  .foot { color:#7c6e5e; font-size:12px; margin-top:20px; text-align:center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="s-home">
+    <h1>二万五千里</h1>
+    <p class="sub">长征闯关问答 · 纪念红军长征胜利90周年</p>
+    <div class="card">
+      <p style="margin-top:0">十道关卡，从江西瑞金走到甘肃会宁。每关给你一段史料，根据它作判断。答错会说明史实，你可以重答，但这一关不再计满分。</p>
+      <p class="warn" id="todoHint"></p>
+    </div>
+    <button class="primary" id="btnStart">开始长征</button>
+    <button class="ghost hide" id="btnRestart">从头再来</button>
+  </div>
+
+  <div id="s-quiz" class="hide">
+    <div class="head">
+      <span id="nodeTag"></span>
+      <span id="kmTag"></span>
+    </div>
+    <div class="bar"><i id="barFill"></i></div>
+    <div class="card">
+      <div class="material" id="material"></div>
+      <p class="ask" id="ask"></p>
+      <div id="opts"></div>
+      <div id="feedback"></div>
+    </div>
+  </div>
+
+  <div id="s-final" class="hide">
+    <h1>三大主力会师</h1>
+    <p class="sub">1936年10月 · 甘肃会宁、静宁将台堡</p>
+    <div class="card final">
+      <div class="score"><span id="finalScore">0</span>/100</div>
+      <p class="sub" id="finalNote"></p>
+    </div>
+    <div class="card">
+      <p style="margin-top:0"><span class="tag">最后一题</span>你这一代人的长征是什么？写一句话，它会留在你的通关页上。</p>
+      <input type="text" id="myWords" maxlength="60" placeholder="例如：把一门很难的课啃下来">
+      <p id="wordsShow" class="warn hide"></p>
+    </div>
+    <div class="card hide" id="todoCard">
+      <p style="margin-top:0">下列关卡还没标注史料出处，交作业前补齐：</p>
+      <ul class="list" id="todoList"></ul>
+    </div>
+    <button class="primary" id="btnAgain">再走一遍</button>
+  </div>
+
+  <p class="foot">思政实践作业 · 题库在 index.html 顶部 QUESTIONS 数组里修改</p>
+</div>
+
+<script>
+/* ============================================================
+   QUESTIONS：十关题库。交作业前请做两件事：
+   1) 把每关 material 里的年代、数字、说法对着权威史料核一遍
+      （《中国共产党历史》第一卷、军事博物馆、本校图书馆数据库）；
+   2) 给每关 source 填上你查到的出处，留空会在通关页提醒你。
+   answer 是正确项在 options 里的下标，从 0 开始数。
+   ============================================================ */
+const QUESTIONS = [
+  {
+    place: "江西瑞金", time: "1934年10月",
+    material: "中央红军出发时约 8.6 万人，队伍里抬着印刷机、X 光机、兵工机械等大批辎重，走起来是一支长长的担担队。",
+    ask: "这种“搬家式”的行军，最直接的后果是什么？",
+    options: [
+      "后方有了保障，战斗力更强",
+      "行军迟缓，无法机动，被动挨打",
+      "群众基础更牢，沿途顺利扩红",
+      "辎重齐全，便于在新根据地恢复生产"
+    ],
+    answer: 1,
+    explain: "“大搬家”式转移使部队难以机动作战，出发后连遭重创，湘江战役后中央红军已由 8.6 万余人锐减至 3 万余人，直接引发全军对错误军事领导的批评。",
+    source: ""
+  },
+  {
+    place: "广西湘江", time: "1934年11月底—12月初",
+    material: "1934年11月下旬至12月初，中央红军在湘江两岸突破国民党军第四道封锁线。战后清点，出发时 8.6 万余人的队伍只剩 3 万余人。",
+    ask: "这三个数字摆在一起，它说明的是什么？",
+    options: [
+      "湘江战役是一次不必要的重大损失，暴露了“左”倾军事路线的严重危害",
+      "红军在湘江全歼敌军，取得长征以来最大胜利",
+      "损失虽大，但战略转移的目的已经达成",
+      "红军主力被打散，长征就此失败"
+    ],
+    answer: 0,
+    explain: "湘江战役是中央红军长征以来最惨烈的一战。重大损失使广大干部战士从震惊中觉醒，为遵义会议纠正错误军事领导作了思想上、组织上的准备。",
+    source: ""
+  },
+  {
+    place: "贵州遵义", time: "1935年1月15日—17日",
+    material: "1935年1月，中共中央政治局在遵义召开扩大会议，集中批评了博古、李德在军事指挥上的错误，增选毛泽东为中央政治局常委，会后成立新的三人军事小组。",
+    ask: "这场会议最关键的意义是什么？",
+    options: [
+      "正式确定了武装抗日的方针",
+      "在事实上确立了以毛泽东为核心的党中央的正确领导，成为党的历史上生死攸关的转折点",
+      "作出了开始战略转移（长征）的决策",
+      "制定了新民主主义革命总路线"
+    ],
+    answer: 1,
+    explain: "遵义会议在极端危急的关头挽救了党、挽救了红军、挽救了中国革命，是中国共产党历史上一个生死攸关的转折点，标志着党在政治上开始走向成熟。",
+    source: ""
+  },
+  {
+    place: "赤水河流域", time: "1935年1月—3月",
+    material: "遵义会议后，中央红军在赤水河两岸往返穿梭，先后四次渡河，把企图围堵的敌军不断调动、甩在身后。",
+    ask: "四渡赤水被视为机动歼敌的典范，关键在哪里？",
+    options: [
+      "红军在兵力上已占绝对优势",
+      "靠沿途群众充足的粮食补给",
+      "依据敌情变化灵活变换作战方向，出敌不意地调动敌人",
+      "敌军各部之间已停止协同"
+    ],
+    answer: 2,
+    explain: "四渡赤水是遵义会议后红军军事指挥艺术的第一场大仗，以高度灵活的运动战迷惑、调动敌人，为跳出国军包围圈创造了条件。",
+    source: ""
+  },
+  {
+    place: "云南禄劝·金沙江", time: "1935年5月",
+    material: "1935年5月初，中央红军在云南禄劝一带的渡口，依靠少数木船昼夜不停渡过金沙江，随后销毁船只，把追兵留在江南。",
+    ask: "渡过金沙江的直接战略意义是什么？",
+    options: [
+      "跳出了数十万敌军的围追堵截，取得战略转移中有决定意义的胜利",
+      "打开了红军北上华北抗日前线的通道",
+      "标志着红军与陕北红军胜利会师",
+      "标志着长征胜利结束"
+    ],
+    answer: 0,
+    explain: "巧渡金沙江使中央红军摆脱了敌人的围追堵截，实现了战略转移意图，为后续强渡大渡河、北上陕北创造了决定性的条件。",
+    source: ""
+  },
+  {
+    place: "四川泸定桥", time: "1935年5月29日",
+    material: "红四团昼夜兼程奔袭，抢先赶到泸定桥西岸。桥上的木板已被抽去，只剩十几根铁索横跨大渡河，突击队员攀索、踏过火墙冲向东岸。",
+    ask: "对这次夺桥战斗最准确的理解是？",
+    options: [
+      "红军装备优于守军，火力压制取胜",
+      "胜负取决于双方兵力对比悬殊",
+      "靠强行军抢在敌人增援和毁桥之前，速度与意志决定了战斗",
+      "说明大渡河防线本就形同虚设"
+    ],
+    answer: 2,
+    explain: "飞夺泸定桥的关键在于一昼夜的强行军，使红军抢在敌军增援、拆桥之前到达并夺下桥头，摆脱了成为“石达开第二”的危险。（奔袭里程、突击队员人数等具体数字请以你核定的史料为准，并填进 source。）",
+    source: ""
+  },
+  {
+    place: "四川夹金山", time: "1935年6月",
+    material: "1935年6月，红军开始翻越终年积雪的夹金山。许多指战员穿着单衣草鞋、带着饥饿向上爬，有人在风雪里坐下就再没起来。",
+    ask: "翻越雪山对红军的考验，本质上是什么？",
+    options: [
+      "指挥系统混乱造成的无谓牺牲",
+      "为了躲避敌机侦察而被迫的选择",
+      "在高寒缺氧的极限环境中对生理、后勤和革命意志的全面考验",
+      "红军缺乏地图和向导的技术问题"
+    ],
+    answer: 2,
+    explain: "雪山、草地等极端自然环境造成的减员不亚于战斗伤亡。正是在这种条件下，纪律、互助和不肯放弃的信念维持了部队的战斗力。",
+    source: ""
+  },
+  {
+    place: "川西北松潘草地", time: "1935年8月",
+    material: "1935年8月，红军穿越松潘水草地。这里没有人烟、没有道路，阴雨泥泞，部队断粮，只能煮皮带、挖野菜充饥。",
+    ask: "过草地时红军靠什么活下来，这反映出什么核心问题？",
+    options: [
+      "后勤补给线已完全中断，部队在无后方依托的条件下靠组织纪律和阶级互助生存",
+      "装备落后，缺少防寒衣物",
+      "当地群众不愿支持红军",
+      "兵员素质参差不齐"
+    ],
+    answer: 0,
+    explain: "草地是长征中后勤最绝望的一段：无粮、无路、无人烟。部队能够成建制走出，靠的是严密的组织和对同志的照护，这也是长征精神中最具体的部分。",
+    source: ""
+  },
+  {
+    place: "陕北吴起镇", time: "1935年10月19日",
+    material: "1935年10月19日，中央红军到达陕北吴起镇，与陕北红军会师；同年11月取得直罗镇战役胜利，被形容为“给党中央把全国革命大本营放在西北举行了一个奠基礼”。",
+    ask: "中央红军到达陕北，应当怎样表述？",
+    options: [
+      "中国工农红军长征已经全部胜利结束",
+      "中央红军主力战略转移任务基本完成，但三大主力红军会师还要再等一年",
+      "抗日民族统一战线至此正式形成",
+      "全民族抗战已经由此开始"
+    ],
+    answer: 1,
+    explain: "要区分两个节点：1935年10月是中央红军（红一方面军）到达陕北；1936年10月三大主力红军会师，长征才胜利结束。",
+    source: ""
+  },
+  {
+    place: "甘肃会宁、将台堡", time: "1936年10月",
+    material: "1936年10月，红一、红二、红四方面军在甘肃会宁、静宁将台堡会师，中国工农红军长征胜利结束。有同学在作文里写道：“1935年10月，三大主力红军在会宁会师，长征胜利结束。”",
+    ask: "请你判断：这句话错在哪里？",
+    options: [
+      "地点错了，会师发生在延安",
+      "会师的只有红一、红两方面军，不包括红四方面军",
+      "时间错了：1935年10月是中央红军到达吴起镇，三大主力会师在1936年10月",
+      "这句话没有史实错误"
+    ],
+    answer: 2,
+    explain: "1935年10月中央红军到陕北，1936年10月三大主力在甘肃会宁、将台堡会师。两个时间不能混用 —— 这也是本次实践主题“1936年10月，三大主力红军的长征胜利结束”的依据。",
+    source: ""
+  }
+];
+
+/* 下面都是引擎逻辑，改题目不用动。 */
+const TOTAL_KM = 25000;
+const KEY = "cz-quiz-v1";
+const $ = (id) => document.getElementById(id);
+let st = { i: 0, score: 0, done: false, missed: {} };
+
+function load() {
+  try { const raw = localStorage.getItem(KEY); if (raw) st = Object.assign(st, JSON.parse(raw)); } catch (e) {}
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {}
+}
+function show(name) {
+  ["s-home", "s-quiz", "s-final"].forEach((id) => $(id).classList.toggle("hide", id !== name));
+}
+function renderHome() {
+  show("s-home");
+  const blank = QUESTIONS.map((q, i) => i + 1).filter((n) => !QUESTIONS[n - 1].source.trim());
+  $("todoHint").textContent = blank.length
+    ? "当前有 " + blank.length + " 关缺少史料出处，做完记得补上。"
+    : "十关出处已齐。";
+  const started = st.i > 0 || st.done;
+  $("btnStart").textContent = st.done ? "看看你的通关页" : started ? "继续长征" : "开始长征";
+  $("btnRestart").classList.toggle("hide", !started);
+}
+function renderQuiz() {
+  const n = st.i, q = QUESTIONS[n];
+  show("s-quiz");
+  $("nodeTag").innerHTML = '<span class="tag">第 ' + (n + 1) + " 关</span>" + q.place + " · " + q.time;
+  const km = Math.round(TOTAL_KM * n / QUESTIONS.length);
+  $("kmTag").textContent = "行程 " + km + " 里";
+  $("barFill").style.width = (100 * n / QUESTIONS.length) + "%";
+  $("material").textContent = q.material;
+  $("ask").textContent = q.ask;
+  $("feedback").innerHTML = "";
+  const box = $("opts");
+  box.innerHTML = "";
+  q.options.forEach((text, idx) => {
+    const b = document.createElement("button");
+    b.className = "opt";
+    b.textContent = text;
+    b.onclick = () => pick(idx, b);
+    box.appendChild(b);
+  });
+}
+function pick(idx, btn) {
+  const q = QUESTIONS[st.i];
+  const firstTry = !st.missed[st.i];
+  if (idx === q.answer) {
+    btn.classList.add("right");
+    if (firstTry) st.score += Math.round(100 / QUESTIONS.length);
+    lock(q, false);
+  } else {
+    btn.classList.add("wrong");
+    st.missed[st.i] = true;
+    $("feedback").innerHTML = '<div class="explain bad">' + q.explain + "</div>";
+    return;
+  }
+  save();
+}
+function lock(q, wrong) {
+  Array.prototype.forEach.call($("opts").children, (b) => { b.disabled = true; });
+  $("feedback").innerHTML = '<div class="explain">' + q.explain + "</div>";
+  const next = document.createElement("button");
+  next.className = "primary";
+  next.textContent = st.i + 1 >= QUESTIONS.length ? "走向会宁" : "继续行军";
+  next.onclick = () => {
+    st.i += 1;
+    if (st.i >= QUESTIONS.length) { st.done = true; }
+    save();
+    st.done ? renderFinal() : renderQuiz();
+  };
+  $("feedback").appendChild(next);
+}
+function renderFinal() {
+  show("s-final");
+  $("barFill").style.width = "100%";
+  $("finalScore").textContent = st.score;
+  const missCount = Object.keys(st.missed).length;
+  $("finalNote").textContent = missCount
+    ? "有 " + missCount + " 关是重答后才走对的。"
+    : "十关全部一次走对。";
+  const blank = QUESTIONS.map((q, i) => i + 1).filter((n) => !QUESTIONS[n - 1].source.trim());
+  $("todoCard").classList.toggle("hide", blank.length === 0);
+  $("todoList").innerHTML = blank.map((n) => "<li>第 " + n + " 关：" + QUESTIONS[n - 1].place + "</li>").join("");
+  const words = $("myWords");
+  words.oninput = () => {
+    const p = $("wordsShow");
+    p.classList.toggle("hide", !words.value.trim());
+    p.textContent = "“" + words.value.trim() + "”";
+  };
+}
+function reset() {
+  st = { i: 0, score: 0, done: false, missed: {} };
+  save();
+  renderHome();
+}
+$("btnStart").onclick = () => { st.done ? renderFinal() : renderQuiz(); };
+$("btnRestart").onclick = reset;
+$("btnAgain").onclick = reset;
+load();
+renderHome();
+</script>
+</body>
+</html>
