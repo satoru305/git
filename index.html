@@ -19,6 +19,13 @@
   h1 { font-size:26px; margin:0 0 4px; letter-spacing:1px; }
   .sub { color:var(--dim); margin:0 0 22px; font-size:14px; }
   .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:14px; }
+  .scene {
+    position:relative; height:150px; border-radius:10px; overflow:hidden; margin-bottom:14px;
+    background:linear-gradient(135deg,#5a3a20,#1b1512);
+  }
+  .scene img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:.8; }
+  .scene::after { content:""; position:absolute; inset:0; background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,.6)); }
+  .scene .cap { position:absolute; left:12px; bottom:8px; z-index:1; font-weight:700; font-size:15px; text-shadow:0 1px 4px #000; }
   .material { background:var(--card); border-left:4px solid var(--gold); border-radius:8px; padding:12px 14px; margin-bottom:14px; color:#e7ddcc; }
   .ask { font-weight:700; margin:0 0 12px; }
   button {
@@ -71,6 +78,7 @@
     </div>
     <div class="bar"><i id="barFill"></i></div>
     <div class="card">
+      <div class="scene"><img id="sceneImg" alt=""><span class="cap" id="sceneCap"></span></div>
       <div class="material" id="material"></div>
       <p class="ask" id="ask"></p>
       <div id="opts"></div>
@@ -81,6 +89,7 @@
   <div id="s-final" class="hide">
     <h1>三大主力会师</h1>
     <p class="sub">1936年10月 · 甘肃会宁、静宁将台堡</p>
+    <div class="scene"><img id="winImg" alt=""><span class="cap">红军长征胜利会师</span></div>
     <div class="card final">
       <div class="score"><span id="finalScore">0</span>/100</div>
       <p class="sub" id="finalNote"></p>
@@ -170,12 +179,12 @@ const QUESTIONS = [
     material: "1935年5月初，中央红军在云南禄劝一带的渡口，依靠少数木船昼夜不停渡过金沙江，随后销毁船只，把追兵留在江南。",
     ask: "渡过金沙江的直接战略意义是什么？",
     options: [
-      "跳出了数十万敌军的围追堵截，取得战略转移中有决定意义的胜利",
       "打开了红军北上华北抗日前线的通道",
       "标志着红军与陕北红军胜利会师",
-      "标志着长征胜利结束"
+      "标志着长征胜利结束",
+      "跳出了数十万敌军的围追堵截，取得战略转移中有决定意义的胜利"
     ],
-    answer: 0,
+    answer: 3,
     explain: "巧渡金沙江使中央红军摆脱了敌人的围追堵截，实现了战略转移意图，为后续强渡大渡河、北上陕北创造了决定性的条件。",
     source: ""
   },
@@ -242,20 +251,67 @@ const QUESTIONS = [
     options: [
       "地点错了，会师发生在延安",
       "会师的只有红一、红两方面军，不包括红四方面军",
-      "时间错了：1935年10月是中央红军到达吴起镇，三大主力会师在1936年10月",
-      "这句话没有史实错误"
+      "这句话没有史实错误",
+      "时间错了：1935年10月是中央红军到达吴起镇，三大主力会师在1936年10月"
     ],
-    answer: 2,
+    answer: 3,
     explain: "1935年10月中央红军到陕北，1936年10月三大主力在甘肃会宁、将台堡会师。两个时间不能混用 —— 这也是本次实践主题“1936年10月，三大主力红军的长征胜利结束”的依据。",
     source: ""
   }
 ];
 
 /* 下面都是引擎逻辑，改题目不用动。 */
+
+/* 十关背景照片：把照片命名为 img/1.jpg … img/10.jpg（按关卡顺序）放进 E:\git\img\，
+   通关照片命名为 img\win.jpg。没有放图时，只显示地名和渐变色，不会出现破图。 */
+const SCENES = ["img/1.jpg","img/2.jpg","img/3.jpg","img/4.jpg","img/5.jpg","img/6.jpg","img/7.jpg","img/8.jpg","img/9.jpg","img/10.jpg"];
+const WIN_IMG = "img/win.jpg";
+
 const TOTAL_KM = 25000;
 const KEY = "cz-quiz-v1";
 const $ = (id) => document.getElementById(id);
 let st = { i: 0, score: 0, done: false, missed: {} };
+
+/* 音效：用振荡器合成，不用音频文件。浏览器要求先有点击才允许出声，所以在答题时才建音频上下文。 */
+let ac = null;
+function ensureAudio() {
+  if (!ac) {
+    try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; }
+  }
+  if (ac && ac.state === "suspended") {
+    try { const p = ac.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) {}
+  }
+}
+function tone(freq, delay, dur, type, peak) {
+  const t0 = ac.currentTime + delay;
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = type || "sine";
+  o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.linearRampToValueAtTime(peak || 0.12, t0 + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g).connect(ac.destination);
+  o.start(t0);
+  o.stop(t0 + dur + 0.03);
+}
+function sndRight() {
+  ensureAudio();
+  if (!ac) return;
+  tone(659, 0, 0.13);
+  tone(988, 0.12, 0.24);
+}
+function sndWrong() {
+  ensureAudio();
+  if (!ac) return;
+  tone(233, 0, 0.16, "sawtooth", 0.07);
+  tone(175, 0.14, 0.26, "sawtooth", 0.07);
+}
+function setScene(img, src, cap) {
+  img.style.display = "";
+  img.onerror = function () { this.style.display = "none"; };
+  img.src = src;
+  if (cap !== undefined) img.parentNode.querySelector(".cap").textContent = cap;
+}
 
 function load() {
   try { const raw = localStorage.getItem(KEY); if (raw) st = Object.assign(st, JSON.parse(raw)); } catch (e) {}
@@ -285,13 +341,14 @@ function renderQuiz() {
   $("barFill").style.width = (100 * n / QUESTIONS.length) + "%";
   $("material").textContent = q.material;
   $("ask").textContent = q.ask;
+  setScene($("sceneImg"), SCENES[n] || "", q.place);
   $("feedback").innerHTML = "";
   const box = $("opts");
   box.innerHTML = "";
   q.options.forEach((text, idx) => {
     const b = document.createElement("button");
     b.className = "opt";
-    b.textContent = text;
+    b.textContent = "ABCD".charAt(idx) + ". " + text;
     b.onclick = () => pick(idx, b);
     box.appendChild(b);
   });
@@ -301,10 +358,13 @@ function pick(idx, btn) {
   const firstTry = !st.missed[st.i];
   if (idx === q.answer) {
     btn.classList.add("right");
+    sndRight();
     if (firstTry) st.score += Math.round(100 / QUESTIONS.length);
     lock(q, false);
   } else {
     btn.classList.add("wrong");
+    btn.disabled = true;
+    sndWrong();
     st.missed[st.i] = true;
     $("feedback").innerHTML = '<div class="explain bad">' + q.explain + "</div>";
     return;
@@ -327,6 +387,7 @@ function lock(q, wrong) {
 }
 function renderFinal() {
   show("s-final");
+  setScene($("winImg"), WIN_IMG);
   $("barFill").style.width = "100%";
   $("finalScore").textContent = st.score;
   const missCount = Object.keys(st.missed).length;
